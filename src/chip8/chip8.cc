@@ -5,6 +5,7 @@
 #include <cstdint>
 #include <filesystem>
 #include <fstream>
+#include <random>
 
 //Template thing I've been experimenting with to give a nice syntax for the &ing and >>ing you end up doing with opcodes. May come in handy in the future:
 auto BreakNibbles(uint16_t const val, uint8_t& nib) -> void
@@ -239,8 +240,8 @@ auto Chip8::Pimpl::Tick() -> void
 	case 0xC: {
 		uint8_t const reg = (opcode & 0xF00) >> 8;
 		uint8_t const val = (opcode & 0xFF);
-		uint8_t const rand = 4;
-		registers[reg] = rand & val;
+		uint8_t const randVal = rand();
+		registers[reg] = randVal & val;
 	}
 	case 0xD: {
 		uint8_t const X = registers[(opcode & 0x0F00) >> 8];
