@@ -20,7 +20,7 @@ auto BreakNibbles(uint16_t val, uint8_t& nib, outs& ... nibs) -> void
 	BreakNibbles(val >> 4, nibs...);
 }
 
-unsigned char chip8_fontset[80] =
+uint8_t chip8_fontset[80] =
 {
 	0xF0, 0x90, 0x90, 0x90, 0xF0, // 0
 	0x20, 0x60, 0x20, 0x20, 0x70, // 1
@@ -343,7 +343,7 @@ Chip8::Chip8() : pimpl(new Chip8::Pimpl())
 
 Chip8::~Chip8() = default;
 
-auto Chip8::GetFramebuffer()->std::array<uint8_t, 64 * 32>&
+auto Chip8::GetFramebuffer() -> std::array<uint8_t, 64 * 32>&
 {
 	return pimpl->framebuffer;
 }

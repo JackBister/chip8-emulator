@@ -7,3 +7,4 @@ This repository contains an implementation of a VM for the [CHIP-8](https://en.w
 - Implement audio
 - Add a way to configure various things (emulated clock frequency, delay/sound timer frequency, window size, keybinds, etc.)
 - Clean up main tick function
+- Clean up interface between main and emulator (framebuffer, input)
