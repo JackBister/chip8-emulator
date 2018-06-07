@@ -33,11 +33,12 @@ auto main(int argc, char *argv[]) -> int
 		return 1;
 	}
 
-	auto window	= SDL_CreateWindow("SDL", SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED, 800, 600, 0);
+	auto window = SDL_CreateWindow("SDL", SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED, 800, 600, 0);
 	auto surface = SDL_GetWindowSurface(window);
 
 	Chip8 chip8;
 	chip8.LoadROM(argv[1]);
+
 
 	auto framebuffer = chip8.GetFramebuffer();
 	auto fbSurface = SDL_CreateRGBSurface(0, 64, 32, 32, 0, 0, 0, 0);
@@ -87,3 +88,4 @@ auto main(int argc, char *argv[]) -> int
 
 	return 0;
 }
+
