@@ -33,16 +33,37 @@ auto main(int argc, char *argv[]) -> int
 		return 1;
 	}
 
+#ifdef _WIN32
+	//Necessary(?) to get audio to play on Windows
+	//At least on my machine it wouldn't play without this. Could let the user set it before running the program but that doesn't seem very user friendly.
+	putenv("SDL_AUDIODRIVER=winmm");
+#endif
+
+	SDL_Init(SDL_INIT_AUDIO);
+
 	auto window = SDL_CreateWindow("SDL", SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED, 800, 600, 0);
 	auto surface = SDL_GetWindowSurface(window);
 
 	Chip8 chip8;
 	chip8.LoadROM(argv[1]);
 
-
 	auto framebuffer = chip8.GetFramebuffer();
 	auto fbSurface = SDL_CreateRGBSurface(0, 64, 32, 32, 0, 0, 0, 0);
 	auto fbSurfacePixels = (uint32_t *)fbSurface->pixels;
+
+	SDL_AudioSpec wanted;
+	wanted.callback = chip8.GetAudioCallback();
+	wanted.channels = 1;
+	wanted.format = AUDIO_U8;
+	wanted.freq = 44100;
+	wanted.samples = 512;
+	wanted.userdata = (void *)&chip8;
+
+	SDL_AudioSpec obtained;
+
+	auto deviceId = SDL_OpenAudioDevice(nullptr, 0, &wanted, &obtained, 0);
+
+	SDL_PauseAudioDevice(deviceId, 0);
 
 	std::array<bool, 16> keys{0};
 

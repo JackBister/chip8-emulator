@@ -1,6 +1,7 @@
 #include "chip8/chip8.hh"
 
 #include <array>
+#include <atomic>
 #include <chrono>
 #include <cstdint>
 #include <filesystem>
@@ -42,6 +43,8 @@ uint8_t chip8_fontset[80] =
 
 struct Chip8::Pimpl
 {
+	static auto AudioCallback(void * userdata, uint8_t * buf, int len) -> void;
+
 	auto Op_Draw(uint8_t VX, uint8_t VY, uint8_t N) -> void;
 	auto Tick() -> void;
 
@@ -56,10 +59,21 @@ struct Chip8::Pimpl
 	uint16_t sp = 0;
 
 	uint8_t delay_timer = 0;
-	uint8_t sound_timer = 0;
+	std::atomic_uint8_t sound_timer = 0;
 
 	std::chrono::high_resolution_clock::time_point lastRefresh;
 };
+
+auto Chip8::Pimpl::AudioCallback(void * userdata, uint8_t * buf, int len) -> void
+{
+	auto impl = (Chip8 *)userdata;
+
+	if (impl->pimpl->sound_timer > 0) {
+		memset(buf, 0xFF, len);
+	} else {
+		memset(buf, 128, len);
+	}
+}
 
 auto Chip8::Pimpl::Op_Draw(uint8_t X, uint8_t Y, uint8_t N) -> void
 {
@@ -342,6 +356,11 @@ Chip8::Chip8() : pimpl(new Chip8::Pimpl())
 }
 
 Chip8::~Chip8() = default;
+
+auto Chip8::GetAudioCallback() -> SDL_AudioCallback
+{
+	return pimpl->AudioCallback;
+}
 
 auto Chip8::GetFramebuffer() -> std::array<uint8_t, 64 * 32>&
 {
