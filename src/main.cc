@@ -1,3 +1,5 @@
+#include <fstream>
+#include <sstream>
 #include <unordered_map>
 
 #include <SDL2/SDL.h>
@@ -26,6 +28,18 @@ std::unordered_map<uint16_t, uint8_t> sdlScanCodeToChip8Key = {
 
 };
 
+auto ParseOptions(std::string optionString) {
+	std::unordered_map<std::string, std::string> ret;
+	while (std::find(optionString.cbegin(), optionString.cend(), '\n') != optionString.cend()) {
+		auto key = optionString.substr(0, optionString.find(' '));
+		optionString = optionString.substr(optionString.find(' '));
+		auto val = optionString.substr(0, optionString.find('\n'));
+		optionString = optionString.substr(optionString.find('\n') + 1);
+		ret[key] = val;
+	}
+	return ret;
+}
+
 auto main(int argc, char *argv[]) -> int
 {
 	if (argc != 2) {
@@ -44,7 +58,15 @@ auto main(int argc, char *argv[]) -> int
 	auto window = SDL_CreateWindow("SDL", SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED, 800, 600, 0);
 	auto surface = SDL_GetWindowSurface(window);
 
-	Chip8 chip8;
+	std::unordered_map<std::string, std::string> emuConfig;
+	std::ifstream configFile(".emuconfig");
+	if (configFile.is_open()) {
+		std::stringstream ss;
+		ss << configFile.rdbuf();
+		emuConfig = ParseOptions(ss.str());
+	}
+
+	Chip8 chip8(emuConfig);
 	chip8.LoadROM(argv[1]);
 
 	auto framebuffer = chip8.GetFramebuffer();
@@ -54,7 +76,7 @@ auto main(int argc, char *argv[]) -> int
 	SDL_AudioSpec wanted;
 	wanted.callback = chip8.GetAudioCallback();
 	wanted.channels = 1;
-	wanted.format = AUDIO_U8;
+	wanted.format = AUDIO_F32;
 	wanted.freq = 44100;
 	wanted.samples = 512;
 	wanted.userdata = (void *)&chip8;

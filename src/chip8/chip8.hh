@@ -3,14 +3,16 @@
 #include <array>
 #include <memory>
 #include <string>
+#include <unordered_map>
 
 //TODO:
 #include <SDL2/SDL.h>
 
+
 class Chip8
 {
 public:
-	Chip8();
+	Chip8(std::unordered_map<std::string, std::string>&);
 	~Chip8();
 
 	auto GetAudioCallback() -> SDL_AudioCallback;

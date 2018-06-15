@@ -4,9 +4,10 @@
 #include <atomic>
 #include <chrono>
 #include <cstdint>
-#include <filesystem>
+//#include <filesystem>
 #include <fstream>
 #include <random>
+#include <unordered_map>
 
 //Template thing I've been experimenting with to give a nice syntax for the &ing and >>ing you end up doing with opcodes. May come in handy in the future:
 auto BreakNibbles(uint16_t const val, uint8_t& nib) -> void
@@ -41,6 +42,15 @@ uint8_t chip8_fontset[80] =
 	0xF0, 0x80, 0xF0, 0x80, 0x80  // F
 };
 
+struct Chip8Config
+{
+	int freq = 0;
+	float volume = 0.0f;
+
+	int delay_freq = 60;
+	int sound_freq = 60;
+};
+
 struct Chip8::Pimpl
 {
 	static auto AudioCallback(void * userdata, uint8_t * buf, int len) -> void;
@@ -61,17 +71,23 @@ struct Chip8::Pimpl
 	uint8_t delay_timer = 0;
 	std::atomic_uint8_t sound_timer = 0;
 
+	Chip8Config config;
 	std::chrono::high_resolution_clock::time_point lastRefresh;
 };
 
 auto Chip8::Pimpl::AudioCallback(void * userdata, uint8_t * buf, int len) -> void
 {
 	auto impl = (Chip8 *)userdata;
+	auto realBuf = (float *)buf;
 
 	if (impl->pimpl->sound_timer > 0) {
-		memset(buf, 0xFF, len);
+		for (int i = 0; i < len / sizeof(float); ++i) {
+			realBuf[i] = impl->pimpl->config.volume;
+		}
 	} else {
-		memset(buf, 128, len);
+		for (int i = 0; i < len / sizeof(float); ++i) {
+			realBuf[i] = 0.f;
+		}
 	}
 }
 
@@ -338,10 +354,12 @@ auto Chip8::Pimpl::Tick() -> void
 		pc += 2;
 	}
 
-	if (std::chrono::duration_cast<std::chrono::milliseconds>(timeSinceRefresh) > std::chrono::milliseconds(16)) {
+	if (timeSinceRefresh > std::chrono::nanoseconds(1000000000) / config.delay_freq) {
 		if (delay_timer > 0) {
 			delay_timer--;
 		}
+	}
+	if (timeSinceRefresh > std::chrono::nanoseconds(1000000000) / config.sound_freq) {
 		if (sound_timer > 0) {
 			sound_timer--;
 		}
@@ -349,10 +367,37 @@ auto Chip8::Pimpl::Tick() -> void
 	}
 }
 
-Chip8::Chip8() : pimpl(new Chip8::Pimpl())
+Chip8::Chip8(std::unordered_map<std::string, std::string>& config) : pimpl(new Chip8::Pimpl())
 {
 	memcpy(&pimpl->memory[0x50], chip8_fontset, sizeof(chip8_fontset));
 	pimpl->lastRefresh = std::chrono::high_resolution_clock::now();
+
+	if (config.find("freq") != config.end()) {
+		pimpl->config.freq = atoi(config["freq"].c_str());
+		if (pimpl->config.freq < 1) {
+			pimpl->config.freq = 0;
+		}
+	}
+	if (config.find("volume") != config.end()) {
+		pimpl->config.volume = atof(config["volume"].c_str());
+	}
+	if (config.find("delay_freq") != config.end()) {
+		pimpl->config.delay_freq = atof(config["delay_freq"].c_str());
+		if (pimpl->config.delay_freq < 1) {
+			pimpl->config.delay_freq = 60;
+		}
+	}
+	if (config.find("sound_freq") != config.end()) {
+		pimpl->config.sound_freq = atof(config["sound_freq"].c_str());
+		if (pimpl->config.sound_freq < 1) {
+			pimpl->config.sound_freq = 60;
+		}
+	}
+	if (config.find("seed") != config.end()) {
+		srand(atof(config["seed"].c_str()));
+	} else {
+		srand(time(nullptr));
+	}
 }
 
 Chip8::~Chip8() = default;
