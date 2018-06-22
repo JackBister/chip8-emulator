@@ -72,7 +72,8 @@ struct Chip8::Pimpl
 	std::atomic_uint8_t sound_timer = 0;
 
 	Chip8Config config;
-	std::chrono::high_resolution_clock::time_point lastRefresh;
+	std::chrono::high_resolution_clock::time_point lastDelayTick;
+	std::chrono::high_resolution_clock::time_point lastSoundTick;
 };
 
 auto Chip8::Pimpl::AudioCallback(void * userdata, uint8_t * buf, int len) -> void
@@ -118,7 +119,9 @@ auto Chip8::Pimpl::Tick() -> void
 	uint16_t const opcode = memory[pc] << 8
 		| memory[pc + 1];
 
-	auto timeSinceRefresh = std::chrono::high_resolution_clock::now() - lastRefresh;
+	auto now = std::chrono::high_resolution_clock::now();
+	auto timeSinceDelayTick = now - lastDelayTick;
+	auto timeSinceSoundTick = now - lastSoundTick;
 
 	auto shouldIncrement = true;
 
@@ -354,23 +357,26 @@ auto Chip8::Pimpl::Tick() -> void
 		pc += 2;
 	}
 
-	if (timeSinceRefresh > std::chrono::nanoseconds(1000000000) / config.delay_freq) {
+	if (timeSinceDelayTick > std::chrono::nanoseconds(1000000000) / config.delay_freq) {
 		if (delay_timer > 0) {
 			delay_timer--;
 		}
+		lastDelayTick = now;
 	}
-	if (timeSinceRefresh > std::chrono::nanoseconds(1000000000) / config.sound_freq) {
+	if (timeSinceSoundTick > std::chrono::nanoseconds(1000000000) / config.sound_freq) {
 		if (sound_timer > 0) {
 			sound_timer--;
 		}
-		lastRefresh = std::chrono::high_resolution_clock::now();
+		lastSoundTick = now;
 	}
 }
 
 Chip8::Chip8(std::unordered_map<std::string, std::string>& config) : pimpl(new Chip8::Pimpl())
 {
 	memcpy(&pimpl->memory[0x50], chip8_fontset, sizeof(chip8_fontset));
-	pimpl->lastRefresh = std::chrono::high_resolution_clock::now();
+	auto now = std::chrono::high_resolution_clock::now();
+	pimpl->lastDelayTick = now;
+	pimpl->lastSoundTick = now;
 
 	if (config.find("freq") != config.end()) {
 		pimpl->config.freq = atoi(config["freq"].c_str());
